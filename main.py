@@ -2,7 +2,7 @@ from prometheus_client import start_http_server, Gauge
 import time
 
 sensePath = "/sys/bus/w1/devices/28-012062361005/w1_slave"
-refreshInterval = 10
+refreshInterval = 2
 
 prometheusTemperature = Gauge('temperature', 'currTemp')
 
