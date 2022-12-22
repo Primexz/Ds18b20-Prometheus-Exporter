@@ -9,8 +9,9 @@ prometheusTemperature = Gauge('temperature', 'currTemp')
 def readTemperature():
     file = open(sensePath, "r")
     temperature = file.readlines()
-    if temperature[0].strip()[-3:] != "YES":
-        return 1000 # default value, sensor seems to be not ready yet
+    while temperature[0].strip()[-3:] != "YES":
+        time.sleep(100)
+
     return temperature[1].split("=")[1]
 
 def publishData(temp):
