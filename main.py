@@ -1,11 +1,16 @@
 from prometheus_client import start_http_server, Gauge
 import time
 import RPi.GPIO as GPIO
+from os import system
 
 sensePath = "/sys/bus/w1/devices/28-012062361005/w1_slave"
 refreshInterval = 0.5
 
 prometheusTemperature = Gauge('temperature', 'currTemp')
+prometheusFanState = Gauge("fan_state", "fan_state")
+prometheusLedState = Gauge("led_state", "led_state")
+
+warningStatus = 0
 
 P_RED = 18     # adapt to your wiring
 P_GREEN = 12   # ditto
@@ -38,12 +43,12 @@ def changeLightPerformance(light):
     pwmB.ChangeDutyCycle(light)
 
 # für stetige
-tempShould = 37000
-tempMaxVolume = 45000
+tempShould = 27000 #37000
+tempMaxVolume = 35000 # 45000
 
 # für zwei-punkt
-tempMin = 36000
-tempMax = 38000
+tempMin = 26000 #36000
+tempMax = 28000 # 38000
 
 changeLightPerformance(100)
 #Stetig
@@ -51,10 +56,13 @@ def controlRgbLED(temp):
     if int(temp) > tempShould:
         tempDiff = int(temp) - tempShould
         if tempDiff > tempMaxVolume:
+            prometheusLedState.set(100)
             changeLightPerformance(0)
         else:
-            changeLightPerformance(100 - (tempDiff * (100000/(tempMaxVolume/10)))/1000)
+           changeLightPerformance(100 - (tempDiff * (100000/(tempMaxVolume/10)))/1000)
+           prometheusLedState.set((tempDiff * (100000/(tempMaxVolume/10)))/1000)
     else:
+        prometheusLedState.set(0)
         changeLightPerformance(100)
 
 #Zwei-Punkt
@@ -64,11 +72,13 @@ def controlSingleLED(temp):
     if ledTurnedOn is True and int(temp) < tempMin:
         GPIO.output(11, GPIO.LOW)
         ledTurnedOn = False
+        prometheusFanState.set(0)
 
     # turn the led on
     if int(temp) > tempMax:
         GPIO.output(11, GPIO.HIGH)
         ledTurnedOn = True
+        prometheusFanState.set(1)
 
 def readTemperature():
     file = open(sensePath, "r")
@@ -81,6 +91,10 @@ def readTemperature():
 def publishData(temp):
     prometheusTemperature.set(temp)
 
+def sendWaring(temp):
+    system("wall WARNUNG! Der Server hat " + str(temp) + "°C erreicht! ")
+
+
 if __name__ == '__main__':
     start_http_server(9898, "127.0.0.1")
     while True:
@@ -88,4 +102,10 @@ if __name__ == '__main__':
         controlSingleLED(temp)
         controlRgbLED(temp)
         publishData(temp)
+        tempC = int(temp) / 1000
+        if tempC >= 25 and warningStatus != 1:
+            warningStatus = 1
+            sendWaring(tempC)
+        if tempC <= 25:
+            warningStatus = 0
         time.sleep(refreshInterval)
