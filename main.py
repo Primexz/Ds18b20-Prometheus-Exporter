@@ -43,27 +43,28 @@ def changeLightPerformance(light):
     pwmB.ChangeDutyCycle(light)
 
 # für stetige
-tempShould = 27000 #37000
-tempMaxVolume = 35000 # 45000
+tempShould = 37000
+tempMaxVolume = 40000
+steadyEnergy = 90
 
 # für zwei-punkt
-tempMin = 26000 #36000
-tempMax = 28000 # 38000
+tempMin = 36000
+tempMax = 38000
 
-changeLightPerformance(100)
+changeLightPerformance(steadyEnergy)
 #Stetig
 def controlRgbLED(temp):
     if int(temp) > tempShould:
         tempDiff = int(temp) - tempShould
         if tempDiff > tempMaxVolume:
-            prometheusLedState.set(100)
+            prometheusLedState.set(steadyEnergy)
             changeLightPerformance(0)
         else:
-           changeLightPerformance(100 - (tempDiff * (100000/(tempMaxVolume/10)))/1000)
-           prometheusLedState.set((tempDiff * (100000/(tempMaxVolume/10)))/1000)
+           changeLightPerformance(steadyEnergy - (tempDiff * ((steadyEnergy*1000)/(tempMaxVolume/10)))/1000)
+           prometheusLedState.set((tempDiff * ((steadyEnergy*1000)/(tempMaxVolume/10)))/1000)
     else:
         prometheusLedState.set(0)
-        changeLightPerformance(100)
+        changeLightPerformance(steadyEnergy)
 
 #Zwei-Punkt
 ledTurnedOn = False
